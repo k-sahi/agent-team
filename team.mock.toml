@@ -1,0 +1,15 @@
+# Offline test team: scripted fake models, no API keys, no cost.
+[settings]
+max_rounds = 2
+approve_commands = false
+
+[members.builder]
+kind = "builder"
+model = "mock/builder"
+prompt = "mock builder"
+
+[members.reviewer]
+kind = "reviewer"
+model = "mock/reviewer"
+tools = ["list_files", "read_file", "run_command"]
+prompt = "mock reviewer"

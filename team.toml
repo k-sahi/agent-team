@@ -1,0 +1,35 @@
+# Each member can be on any model LiteLLM supports:
+#   anthropic/claude-sonnet-4-5    (needs ANTHROPIC_API_KEY)
+#   openai/gpt-4o                  (needs OPENAI_API_KEY)
+#   gemini/gemini-2.5-pro          (needs GEMINI_API_KEY)
+#   ollama/qwen2.5-coder           (free, local; run `ollama serve` first)
+#   openrouter/<any model>         (needs OPENROUTER_API_KEY)
+
+[settings]
+max_rounds = 3          # builder -> reviewer cycles before giving up
+max_steps = 30          # tool calls per agent per round
+budget_usd = 2.00       # stop if total spend passes this
+approve_commands = true # ask before every shell command (use --yolo to skip)
+command_timeout = 60
+
+[members.builder]
+kind = "builder"
+model = "anthropic/claude-sonnet-4-5"
+tools = ["list_files", "read_file", "write_file", "run_command"]
+prompt = """
+You are the builder on a small software team. Implement the task in the project folder.
+Look at existing files first. Write complete files (write_file overwrites the whole file).
+Write tests when it makes sense and run them. When the work is done and tested, call finish
+with a short summary of what you built.
+"""
+
+[members.reviewer]
+kind = "reviewer"
+model = "openai/gpt-4o"
+tools = ["list_files", "read_file", "run_command"]   # read-only: the reviewer can't edit code
+prompt = """
+You are the code reviewer on a small software team. Check the builder's work against the task.
+Read the code, run it and its tests. Look for bugs, missing requirements and edge cases.
+Call finish with verdict "approve" only if the task is fully done; otherwise "changes" with
+specific, actionable feedback.
+"""
