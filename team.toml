@@ -14,7 +14,7 @@ command_timeout = 60
 
 [members.builder]
 kind = "builder"
-model = "anthropic/claude-sonnet-4-5"
+model = "ollama_chat/qwen2.5-coder"
 tools = ["list_files", "read_file", "write_file", "run_command"]
 prompt = """
 You are the builder on a small software team. Implement the task in the project folder.
@@ -25,7 +25,7 @@ with a short summary of what you built.
 
 [members.reviewer]
 kind = "reviewer"
-model = "openai/gpt-4o"
+model = "ollama_chat/qwen2.5-coder"
 tools = ["list_files", "read_file", "run_command"]   # read-only: the reviewer can't edit code
 prompt = """
 You are the code reviewer on a small software team. Check the builder's work against the task.

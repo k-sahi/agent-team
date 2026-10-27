@@ -7,6 +7,7 @@ look like "anthropic/claude-sonnet-4-5", "openai/gpt-4o", "ollama/qwen2.5-coder"
 Models named "mock/..." are scripted fakes so you can test with no API keys.
 """
 import json
+import uuid
 from dataclasses import dataclass, field
 
 
@@ -39,11 +40,44 @@ def chat(model: str, messages: list, tools: list) -> Reply:
         except json.JSONDecodeError:
             args = {"_raw": tc.function.arguments}
         calls.append(ToolCall(tc.id, tc.function.name, args))
+    if not calls and msg.content:
+        # Some local models type the tool call as JSON text instead of making a real call.
+        calls = parse_text_tool_calls(msg.content, tools)
     try:
         cost = litellm.completion_cost(completion_response=resp) or 0.0
     except Exception:
         cost = 0.0  # local models / unknown pricing
     return Reply(msg.content or "", calls, cost)
+
+
+def parse_text_tool_calls(text: str, tools: list) -> list:
+    """Find tool calls written as JSON text, like {"name": "read_file", "arguments": {...}}.
+
+    Only names of tools the agent actually has are accepted, so ordinary JSON in a
+    reply is ignored.
+    """
+    names = {t["function"]["name"] for t in tools}
+    decoder = json.JSONDecoder()
+    calls, i = [], 0
+    while (i := text.find("{", i)) != -1:
+        try:
+            obj, end = decoder.raw_decode(text, i)
+        except json.JSONDecodeError:
+            i += 1
+            continue
+        if isinstance(obj, dict) and obj.get("name") in names:
+            args = obj.get("arguments", obj.get("parameters", {}))
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = None
+            if isinstance(args, dict):
+                calls.append(ToolCall(f"call_{uuid.uuid4().hex[:8]}", obj["name"], args))
+            i = end
+        else:
+            i += 1
+    return calls
 
 
 # ---------------------------------------------------------------- mock models
